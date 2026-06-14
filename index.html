@@ -819,7 +819,13 @@ function toggleChat() {
     const chat = document.getElementById('chat-window');
     const isHidden = window.getComputedStyle(chat).display === 'none';
     chat.style.display = isHidden ? 'flex' : 'none';
-    if (isHidden) scrollToBottom();
+    
+    if (isHidden) {
+        document.body.style.overflow = 'hidden'; // Zamraża tło
+        scrollToBottom();
+    } else {
+        document.body.style.overflow = ''; // Odmraża tło po zamknięciu
+    }
 }
 
 function wyslijWiadomosc() {
