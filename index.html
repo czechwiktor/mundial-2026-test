@@ -239,6 +239,43 @@
 
             .status-live, .status-ended { display: block; margin-top: 5px; margin-left: 0; }
         }
+
+
+        /* ─── PŁYWAJĄCY CZAT ─── */
+        #chat-btn {
+            position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%;
+            background: #00E5FF; color: #1A0B2E; font-size: 1.8em; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 5px 15px rgba(0,229,255,0.4); border: none; cursor: pointer; z-index: 999; transition: 0.3s;
+        }
+        #chat-btn:hover { transform: scale(1.1); }
+        #chat-window {
+            position: fixed; bottom: 90px; right: 20px; width: 350px; height: 500px; max-width: 90vw; max-height: 70vh;
+            background: rgba(10, 5, 20, 0.95); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px;
+            display: none; flex-direction: column; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.8); overflow: hidden;
+        }
+        .chat-header {
+            background: rgba(0, 229, 255, 0.15); padding: 15px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .chat-header h3 { margin: 0; color: #00E5FF; font-size: 1.2em; text-transform: uppercase; }
+        .close-chat { background: none; border: none; color: #fff; font-size: 1.5em; cursor: pointer; }
+        #chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 15px; border-radius: 15px; max-width: 85%; font-size: 0.9em; word-wrap: break-word; }
+        .msg-other { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg-me { background: rgba(0, 229, 255, 0.2); color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; border: 1px solid rgba(0,229,255,0.3); }
+        .msg-author { font-size: 0.75em; opacity: 0.6; margin-bottom: 3px; display: block; font-weight: bold; }
+        .chat-input-area { display: flex; padding: 10px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.1); }
+        .chat-input-area input {
+            flex: 1; padding: 12px; border-radius: 10px; border: none; background: rgba(255,255,255,0.9);
+            font-family: 'Poppins', sans-serif; outline: none; font-size: 16px !important;
+        }
+        .chat-input-area button { background: #00E5FF; border: none; border-radius: 10px; padding: 0 15px; margin-left: 10px; cursor: pointer; font-weight: bold; color: #1A0B2E; transition: 0.2s; }
+        
+        @media (max-width: 768px) {
+            #chat-window { bottom: 0; right: 0; width: 100%; height: 100%; max-width: 100%; max-height: 100%; border-radius: 0; z-index: 2000; }
+        }
+
+        
     </style>
 </head>
 <body>
@@ -315,6 +352,21 @@
     <div class="day-filter-bar" id="day-filter-bar"></div>
 
     <div id="lista-meczow"></div>
+</div>
+
+
+    <!-- PŁYWAJĄCY CZAT -->
+<button id="chat-btn" onclick="toggleChat()">💬</button>
+<div id="chat-window">
+    <div class="chat-header">
+        <h3>Trybuna</h3>
+        <button class="close-chat" onclick="toggleChat()">✖</button>
+    </div>
+    <div id="chat-messages"></div>
+    <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Napisz wiadomość..." onkeypress="handleChatKey(event)">
+        <button onclick="wyslijWiadomosc()">Wyślij</button>
+    </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -547,6 +599,7 @@ function init() {
     renderStageNav();
     renderMatches();
     listenFirebase();
+    listenChat(); // <--- DODAJ TĘ LINIJKĘ
 }
 
 function renderStageNav() {
@@ -791,6 +844,54 @@ function obliczPunkty() {
     });
 }
 
+// ─── OBSŁUGA CZATU ────────────────────────────────────────────────────────────
+function toggleChat() {
+    const chat = document.getElementById('chat-window');
+    const isHidden = window.getComputedStyle(chat).display === 'none';
+    chat.style.display = isHidden ? 'flex' : 'none';
+    if (isHidden) scrollToBottom();
+}
+
+function wyslijWiadomosc() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    const myName = myPlayerId === 'admin' ? 'Admin 👑' : gracze.find(g => g.id === myPlayerId)?.name || 'Ktoś';
+    
+    db.ref('mundial-chat').push({
+        authorId: myPlayerId,
+        authorName: myName,
+        text: text,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+    input.value = '';
+}
+
+function handleChatKey(e) {
+    if (e.key === 'Enter') wyslijWiadomosc();
+}
+
+function listenChat() {
+    db.ref('mundial-chat').on('child_added', (snapshot) => {
+        const msg = snapshot.val();
+        const chatBox = document.getElementById('chat-messages');
+        const isMe = msg.authorId === myPlayerId;
+        
+        const div = document.createElement('div');
+        div.className = 'msg ' + (isMe ? 'msg-me' : 'msg-other');
+        div.innerHTML = `<span class="msg-author">${msg.authorName}</span>${msg.text}`;
+        
+        chatBox.appendChild(div);
+        scrollToBottom();
+    });
+}
+
+function scrollToBottom() {
+    const chatBox = document.getElementById('chat-messages');
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+    
 setInterval(() => { syncFromFirebaseSnapshot(); obliczPunkty(); }, 5000);
 </script>
 </body>
