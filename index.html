@@ -184,7 +184,9 @@
         .msg { padding: 10px 15px; border-radius: 15px; max-width: 85%; font-size: 0.9em; word-wrap: break-word; position: relative; }
         .msg-other { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg-me { background: rgba(0, 229, 255, 0.2); color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; border: 1px solid rgba(0,229,255,0.3); }
-        .msg-author { font-size: 0.75em; color: #00E5FF; margin-bottom: 3px; display: block; font-weight: 800; }
+        .msg-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; gap: 10px; }
+        .msg-author { font-size: 0.75em; color: #00E5FF; font-weight: 800; }
+        .msg-time { font-size: 0.65em; color: rgba(255,255,255,0.4); white-space: nowrap; font-weight: normal; }
         
         .chat-input-area { display: flex; padding: 10px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.1); }
         .chat-input-area input {
@@ -889,37 +891,81 @@ function listenChat() {
             });
             reactsHtml += `</div></div>`;
 
-            div.innerHTML = `<span class="msg-author">${msg.authorName}</span>${msg.text}${reactsHtml}`;
+            div.innerHTML = `<div class="msg-header"><span class="msg-author">${msg.authorName}</span><span class="msg-time">${formatMessageTime(msg.timestamp)}</span></div>${msg.text}${reactsHtml}`;
             chatBox.appendChild(div);
         });
         
         if (isAtBottom) scrollToBottom();
     });
 }
-
+    
+//-----------------------------------------------------------------------------------------
 function toggleChatPicker(element) {
     document.querySelectorAll('.react-picker').forEach(p => {
         if(p !== element.nextElementSibling) p.classList.remove('show-picker');
     });
     element.nextElementSibling.classList.toggle('show-picker');
 }
-
+    
+//-----------------------------------------------------------------------------------------
 function closeAllPickers() {
     document.querySelectorAll('.react-picker').forEach(p => p.classList.remove('show-picker'));
 }
-
-function toggleReact(msgId, emoji) {
-    const ref = db.ref(`mundial-chat/${msgId}/reactions/${emoji}`);
+    
+//-----------------------------------------------------------------------------------------
+function toggleReact(msgId, selectedEmoji) {
+    const ref = db.ref(`mundial-chat/${msgId}/reactions`);
     ref.once('value', snap => {
         let reacts = snap.val() || {};
-        if (reacts[myPlayerId]) {
-            ref.child(myPlayerId).remove(); // Cofnięcie reakcji
-        } else {
-            ref.child(myPlayerId).set(true); // Dodanie reakcji
+        let updates = {};
+        let hadThisEmoji = false;
+        
+        // Pętla sprawdza wszystkie emotki i usuwa Twoje imię z innych, które wcześniej kliknąłeś
+        const emojis = ['👍', '😂', '🔥', '🤡', '⚽'];
+        emojis.forEach(e => {
+            if (reacts[e] && reacts[e][myPlayerId]) {
+                if (e === selectedEmoji) hadThisEmoji = true;
+                updates[`${e}/${myPlayerId}`] = null; 
+            }
+        });
+        
+        // Jeśli kliknąłeś nową emotkę, dodaje ją. Jeśli kliknąłeś tę samą co wcześniej - tylko ją usuwa (odkliknięcie).
+        if (!hadThisEmoji) {
+            updates[`${selectedEmoji}/${myPlayerId}`] = true;
         }
+        
+        ref.update(updates);
     });
 }
-
+    
+//-----------------------------------------------------------------------------------------
+function formatMessageTime(timestamp) {
+    if (!timestamp) return '';
+    const msgDate = new Date(timestamp);
+    const now = new Date();
+    
+    const timeStr = msgDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    
+    // Ten sam dzień: samo "20:45"
+    if (msgDate.toDateString() === now.toDateString()) {
+        return timeStr;
+    }
+    
+    const diffDays = Math.floor((now - msgDate) / (1000 * 60 * 60 * 24));
+    
+    // Inny dzień, ale w tym samym tygodniu (do 6 dni wstecz): "Wt, 20:45"
+    if (diffDays < 7) {
+        const dni = ['Ndz', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'];
+        return `${dni[msgDate.getDay()]}, ${timeStr}`;
+    } 
+    // Dawniej: "2 cze, 20:45"
+    else {
+        const miesiace = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+        return `${msgDate.getDate()} ${miesiace[msgDate.getMonth()]}, ${timeStr}`;
+    }
+}
+    
+//-----------------------------------------------------------------------------------------
 function scrollToBottom() {
     const chatBox = document.getElementById('chat-messages');
     chatBox.scrollTop = chatBox.scrollHeight;
