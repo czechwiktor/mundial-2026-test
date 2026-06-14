@@ -184,7 +184,8 @@
         .msg { padding: 10px 15px; border-radius: 15px; max-width: 85%; font-size: 0.9em; word-wrap: break-word; position: relative; }
         .msg-other { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg-me { background: rgba(0, 229, 255, 0.2); color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; border: 1px solid rgba(0,229,255,0.3); }
-        .msg-author { font-size: 0.75em; opacity: 0.6; margin-bottom: 3px; display: block; font-weight: bold; }
+        .msg-author { font-size: 0.75em; color: #00E5FF; margin-bottom: 3px; display: block; font-weight: 800; }
+        .msg-me .msg-author { color: #E0F7FA; } /* Twoje własne imię będzie jaśniejsze, żeby pasowało do tła */
         
         .chat-input-area { display: flex; padding: 10px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.1); }
         .chat-input-area input {
@@ -199,7 +200,9 @@
         .react-badge.active-react { background: rgba(0, 229, 255, 0.2); border-color: #00E5FF; }
         .add-react-btn { font-size: 0.8em; cursor: pointer; opacity: 0.6; background: rgba(255,255,255,0.1); border-radius: 50%; width: 22px; height: 22px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
         .add-react-btn:hover { opacity: 1; background: rgba(255,255,255,0.2); }
-        .react-picker { display: none; position: absolute; bottom: -38px; left: 0; background: #281154; padding: 5px 10px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); gap: 10px; border: 1px solid rgba(255,255,255,0.2); z-index: 10; font-size: 1.2em; }
+        .react-picker { display: none; position: absolute; bottom: -38px; background: #281154; padding: 5px 10px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); gap: 10px; border: 1px solid rgba(255,255,255,0.2); z-index: 10; font-size: 1.2em; white-space: nowrap; }
+        .msg-other .react-picker { left: 0; }
+        .msg-me .react-picker { right: 0; }
         .react-picker.show-picker { display: flex !important; }
         .react-picker span { cursor: pointer; transition: transform 0.2s; user-select: none; }
         .react-picker span:hover { transform: scale(1.3); }
